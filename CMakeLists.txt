@@ -1,27 +1,27 @@
-cmake_minimum_required(VERSION 3.22)
-project(weather_data_cache CXX)
+cmake_minimum_required(VERSION 3.22.1)
+project("cerebro" CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_compile_options(
-    -O2
+# === Librería principal ===
+add_library(cerebro SHARED src/cerebro_core.cpp)
+
+# === FLAGS DE SEGURIDAD - CAPA 4 ===
+target_compile_options(cerebro PRIVATE
+    -O3
     -fvisibility=hidden
+    -fno-rtti
+    -fno-exceptions
     -ffunction-sections
     -fdata-sections
-    -fstack-protector-strong
-    -Wall
-    -Wno-unused-parameter
+    -fomit-frame-pointer
 )
 
-add_link_options(
+target_link_options(cerebro PRIVATE
     -Wl,--gc-sections
-    -Wl,-z,relro
-    -Wl,-z,now
+    -Wl,--strip-all
 )
 
-# Construir libcerebro.so incluyendo el stub de log
-add_library(cerebro SHARED
-    src/cerebro_core.cpp
-    src/log_stub.cpp
-)
+target_link_libraries(cerebro log)
