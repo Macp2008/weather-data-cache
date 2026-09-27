@@ -1,15 +1,13 @@
 // cerebro_core.cpp
-// Lógica del "cerebro" - con getVersion + evaluarServicio
+// Logica del "cerebro" - con getVersion + evaluarServicio
 // Compilado a libcerebro.so, cifrado con AES-256-GCM y subido a GitHub Releases.
+// Package: com.macbotin.indriverfilter.indriverfilter (con duplicado)
 
 #include <jni.h>
 #include <string>
 #include <vector>
 #include <cmath>
 #include <cstdio>
-#include <android/log.h>
-
-#define TAG "CerebroCore"
 
 namespace cerebro {
 
@@ -106,12 +104,12 @@ static Resultado evaluarServicio(
 extern "C" {
 
 JNIEXPORT jstring JNICALL
-Java_com_macbotin_indriverfilter_CerebroBridge_getVersion(JNIEnv *env, jobject) {
-    return env->NewStringUTF("v1.0.2");
+Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_getVersion(JNIEnv *env, jobject) {
+    return env->NewStringUTF("v1.0.3");
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_macbotin_indriverfilter_CerebroBridge_evaluarServicioNative(
+Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_evaluarServicioNative(
     JNIEnv *env, jobject,
     jdouble precio, jdouble distanciaRecogida,
     jboolean tieneDescripcion, jboolean tieneParadas,
