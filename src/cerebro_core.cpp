@@ -15,6 +15,44 @@
 #define TAG "CerebroCore"
 
 // ============================================================
+//  CAPA 3: STRING ENCRYPTION (XOR)
+//  Todos los strings críticos están cifrados con XOR y se
+//  descifran solo al momento de usarlos. Un análisis estático
+//  con `strings` no mostrará nada legible.
+// ============================================================
+
+namespace ofus {
+
+static const unsigned char X_KEY[8] = {0x37, 0xA1, 0x5C, 0x2E, 0x91, 0x4D, 0xB8, 0x73};
+
+// Strings cifrados (se descifran al usar)
+static unsigned char S_VERSION[]       = {0x41, 0x90, 0x72, 0x1E, 0xBF, 0x7B, 0x84, 0x0E}; // "v1.0.7"
+static unsigned char S_RECHAZADO[]     = {0x45, 0xC4, 0x3F, 0x46, 0xF0, 0x37, 0xD9, 0x17, 0x58};
+static unsigned char S_OK[]            = {0x58, 0xCA};
+static unsigned char S_DESCONOCIDO[]   = {0x53, 0xC4, 0x2F, 0x4D, 0xFE, 0x23, 0xD7, 0x10, 0x5E, 0xC5, 0x33};
+static unsigned char S_SIN_DESC[]      = {0x44, 0xC8, 0x32, 0x71, 0xF5, 0x28, 0xCB, 0x10, 0x45, 0xC8, 0x2C, 0x4D, 0xF8, 0x22, 0xD6};
+static unsigned char S_TIENE_PARADAS[] = {0x43, 0xC8, 0x39, 0x40, 0xF4, 0x12, 0xC8, 0x12, 0x45, 0xC0, 0x38, 0x4F, 0xE2};
+static unsigned char S_PRECIO_BAJO[]   = {0x47, 0xD3, 0x39, 0x4D, 0xF8, 0x22, 0xE7, 0x11, 0x56, 0xCB, 0x33, 0x71, 0xFC, 0x24, 0xD6, 0x1A, 0x5A, 0xCE};
+static unsigned char S_PRECIO_SOBRE[]  = {0x47, 0xD3, 0x39, 0x4D, 0xF8, 0x22, 0xE7, 0x00, 0x58, 0xC3, 0x2E, 0x4B, 0xCE, 0x20, 0xD9, 0x0B, 0x5E, 0xCC, 0x33};
+static unsigned char S_MUY_LEJOS[]     = {0x53, 0xC4, 0x31, 0x4F, 0xE2, 0x24, 0xD9, 0x17, 0x58, 0xFE, 0x30, 0x4B, 0xFB, 0x22, 0xCB};
+static unsigned char S_ZONA_BLOQ[]     = {0x4D, 0xCE, 0x32, 0x4F, 0xCE, 0x2F, 0xD4, 0x1C, 0x46, 0xD4, 0x39, 0x4F, 0xF5, 0x2C};
+static unsigned char S_ZONA_FAV[]      = {0x4D, 0xCE, 0x32, 0x4F, 0xCE, 0x2B, 0xD9, 0x05, 0x58, 0xD3, 0x35, 0x5A, 0xF0};
+static unsigned char S_FAVORITA[]      = {0x51, 0xC0, 0x2A, 0x41, 0xE3, 0x24, 0xCC, 0x12};
+static unsigned char S_LAT[]           = {0x5B, 0xC0, 0x28};
+static unsigned char S_LNG[]           = {0x5B, 0xCF, 0x3B};
+static unsigned char S_RADIO[]         = {0x45, 0xC0, 0x38, 0x47, 0xFE};
+
+// Descifra un buffer cifrado in-place y lo retorna como std::string
+static std::string dec(unsigned char* data, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        data[i] ^= X_KEY[i % 8];
+    }
+    return std::string(reinterpret_cast<char*>(data), len);
+}
+
+} // namespace ofus
+
+// ============================================================
 //  CAPA 1: ANTI-FRIDA / ANTI-DEBUGGER
 //  Detecta herramientas de hooking y depuración.
 //  Si comprometido, devuelve false (silencioso, sin avisar).
@@ -177,33 +215,33 @@ static Resultado evaluarServicio(
 ) {
     Resultado r;
     r.aceptado = false;
-    r.motivo = "desconocido";
+    r.motivo = ofus::dec(ofus::S_DESCONOCIDO, sizeof(ofus::S_DESCONOCIDO));
 
     // 1. Descripción obligatoria
     if (!tieneDescripcion) {
-        r.motivo = "sin_descripcion";
+        r.motivo = ofus::dec(ofus::S_SIN_DESC, sizeof(ofus::S_SIN_DESC));
         return r;
     }
 
     // 2. Rechazo de paradas múltiples
     if (rechazarParadas && tieneParadas) {
-        r.motivo = "tiene_paradas";
+        r.motivo = ofus::dec(ofus::S_TIENE_PARADAS, sizeof(ofus::S_TIENE_PARADAS));
         return r;
     }
 
     // 3. Rango de precio
     if (precioMinimo > 0.0 && precio < precioMinimo) {
-        r.motivo = "precio_bajo_minimo";
+        r.motivo = ofus::dec(ofus::S_PRECIO_BAJO, sizeof(ofus::S_PRECIO_BAJO));
         return r;
     }
     if (precioMaximo > 0.0 && precio > precioMaximo) {
-        r.motivo = "precio_sobre_maximo";
+        r.motivo = ofus::dec(ofus::S_PRECIO_SOBRE, sizeof(ofus::S_PRECIO_SOBRE));
         return r;
     }
 
     // 4. Distancia de recogida
     if (distanciaMaxima > 0.0 && distanciaRecogida > distanciaMaxima) {
-        r.motivo = "demasiado_lejos";
+        r.motivo = ofus::dec(ofus::S_MUY_LEJOS, sizeof(ofus::S_MUY_LEJOS));
         return r;
     }
 
@@ -214,12 +252,12 @@ static Resultado evaluarServicio(
             double d = distanciaMetros(z.lat, z.lng, latDestino, lngDestino);
             if (d <= z.radioMetros) {
                 if (!z.esFavorita) {
-                    r.motivo = "zona_bloqueada";
+                    r.motivo = ofus::dec(ofus::S_ZONA_BLOQ, sizeof(ofus::S_ZONA_BLOQ));
                     return r;
                 }
                 // Si es favorita, se acepta con bonus
                 r.aceptado = true;
-                r.motivo = "zona_favorita";
+                r.motivo = ofus::dec(ofus::S_ZONA_FAV, sizeof(ofus::S_ZONA_FAV));
                 r.distanciaDestino = d;
                 return r;
             }
@@ -228,7 +266,7 @@ static Resultado evaluarServicio(
 
     // Aceptado por defecto
     r.aceptado = true;
-    r.motivo = "ok";
+    r.motivo = ofus::dec(ofus::S_OK, sizeof(ofus::S_OK));
     r.distanciaDestino = 0.0;
     return r;
 }
@@ -243,7 +281,7 @@ extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_getVersion(JNIEnv *env, jobject) {
-    return env->NewStringUTF("v1.0.6");
+    return env->NewStringUTF(ofus::dec(ofus::S_VERSION, sizeof(ofus::S_VERSION)).c_str());
 }
 
 JNIEXPORT jstring JNICALL
