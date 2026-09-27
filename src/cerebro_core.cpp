@@ -243,13 +243,14 @@ extern "C" {
 
 JNIEXPORT jstring JNICALL
 Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_getVersion(JNIEnv *env, jobject) {
-    return env->NewStringUTF("v1.0.5");
+    return env->NewStringUTF("v1.0.6");
 }
 
 JNIEXPORT jstring JNICALL
 Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_evaluarServicioNative(
     JNIEnv *env,
     jobject,
+    jstring shaFirmaActual,
     jdouble precio,
     jdouble distanciaRecogida,
     jboolean tieneDescripcion,
@@ -271,6 +272,41 @@ Java_com_macbotin_indriverfilter_indriverfilter_CerebroBridge_evaluarServicioNat
     //  ejecutar la lógica real. NO muestra nada.
     // ==================================================
     if (seguridad::entornoComprometido()) {
+        return env->NewStringUTF(
+            "{\"aceptado\":false,\"motivo\":\"rechazado\",\"distancia\":0.00}"
+        );
+    }
+
+    // ==================================================
+    //  CAPA 2: VALIDACIÓN DE FIRMA SHA-256
+    //  Compara el SHA de la firma que Kotlin calculó
+    //  contra el SHA esperado (guardado al primer arranque).
+    //  Si NO se pasó SHA o es NULL → comprometido.
+    //  Si difiere del esperado → APK re-firmada.
+    // ==================================================
+    if (shaFirmaActual == nullptr) {
+        return env->NewStringUTF(
+            "{\"aceptado\":false,\"motivo\":\"rechazado\",\"distancia\":0.00}"
+        );
+    }
+
+    const char* shaChars = env->GetStringUTFChars(shaFirmaActual, nullptr);
+    std::string shaStr = (shaChars != nullptr) ? shaChars : "";
+    env->ReleaseStringUTFChars(shaFirmaActual, shaChars);
+
+    // SHA esperado: 64 caracteres hexadecimales (256 bits)
+    // Se establece al primer arranque desde Kotlin.
+    static std::string shaEsperado = "";
+    static bool shaInicializado = false;
+
+    // Si es la primera vez, guardamos el SHA como referencia
+    if (!shaInicializado && shaStr.length() == 64) {
+        shaEsperado = shaStr;
+        shaInicializado = true;
+    }
+
+    // Validar: SHA debe existir, tener 64 chars hex y coincidir
+    if (shaEsperado.empty() || shaStr.length() != 64 || shaStr != shaEsperado) {
         return env->NewStringUTF(
             "{\"aceptado\":false,\"motivo\":\"rechazado\",\"distancia\":0.00}"
         );
